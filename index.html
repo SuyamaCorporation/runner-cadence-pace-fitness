@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ランナーケーデンス・ペース適性ガイド</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .input-group input:focus { outline: none; }
+    .gauge-bar { transition: width 0.6s ease; }
+    .tip-card { transition: all 0.2s; }
+    .cadence-meter { background: linear-gradient(to right, #86efac, #fde68a, #fca5a5); }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-green-50 to-emerald-100 min-h-screen font-sans">
+
+<div class="max-w-2xl mx-auto px-4 py-6">
+
+  <header class="text-center mb-6">
+    <h1 class="text-3xl font-bold text-emerald-800 mb-1">🏃 ランナー適性ガイド</h1>
+    <p class="text-emerald-600 text-sm">ケーデンス・歩幅・完走ペースを計算してフォームを改善しよう</p>
+  </header>
+
+  <!-- Input Card -->
+  <div class="bg-white rounded-2xl shadow-lg p-6 mb-5">
+    <h2 class="text-lg font-bold text-gray-800 mb-4">📊 あなたのデータを入力</h2>
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+      <div>
+        <label class="block text-sm font-semibold text-gray-600 mb-1" for="pace-min">目標ペース（分）</label>
+        <div class="flex items-center gap-1">
+          <input id="pace-min" type="number" min="3" max="10" value="5" class="w-full border-2 border-gray-200 focus:border-emerald-400 rounded-lg px-3 py-2 text-center text-lg font-bold" aria-label="ペースの分" />
+          <span class="text-gray-500 text-sm font-semibold">分</span>
+        </div>
+      </div>
+      <div>
+        <label class="block text-sm font-semibold text-gray-600 mb-1" for="pace-sec">目標ペース（秒）</label>
+        <div class="flex items-center gap-1">
+          <input id="pace-sec" type="number" min="0" max="59" value="30" class="w-full border-2 border-gray-200 focus:border-emerald-400 rounded-lg px-3 py-2 text-center text-lg font-bold" aria-label="ペースの秒" />
+          <span class="text-gray-500 text-sm font-semibold">秒/km</span>
+        </div>
+      </div>
+      <div>
+        <label class="block text-sm font-semibold text-gray-600 mb-1" for="height">身長 (cm)</label>
+        <input id="height" type="number" min="140" max="220" value="170" class="w-full border-2 border-gray-200 focus:border-emerald-400 rounded-lg px-3 py-2 text-center text-lg font-bold" aria-label="身長" />
+      </div>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
+      <div>
+        <label class="block text-sm font-semibold text-gray-600 mb-1" for="weight">体重 (kg)</label>
+        <input id="weight" type="number" min="40" max="150" value="65" class="w-full border-2 border-gray-200 focus:border-emerald-400 rounded-lg px-3 py-2 text-center text-lg font-bold" aria-label="体重" />
+      </div>
+      <div class="flex items-end">
+        <button id="btn-calc" class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 rounded-xl transition-all text-lg" aria-label="計算する">計算する</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Results -->
+  <div id="results" class="hidden">
+
+    <!-- Key Metrics -->
+    <div class="grid grid-cols-3 gap-3 mb-5">
+      <div class="bg-white rounded-2xl shadow p-4 text-center">
+        <div class="text-xs text-gray-500 mb-1">推奨ケーデンス</div>
+        <div id="res-cadence" class="text-3xl font-bold text-emerald-600"></div>
+        <div class="text-xs text-gray-400">歩/分</div>
+      </div>
+      <div class="bg-white rounded-2xl shadow p-4 text-center">
+        <div class="text-xs text-gray-500 mb-1">推定歩幅</div>
+        <div id="res-stride" class="text-3xl font-bold text-blue-600"></div>
+        <div class="text-xs text-gray-400">cm</div>
+      </div>
+      <div class="bg-white rounded-2xl shadow p-4 text-center">
+        <div class="text-xs text-gray-500 mb-1">走行速度</div>
+        <div id="res-speed" class="text-3xl font-bold text-purple-600"></div>
+        <div class="text-xs text-gray-400">km/h</div>
+      </div>
+    </div>
+
+    <!-- Cadence Gauge -->
+    <div class="bg-white rounded-2xl shadow-lg p-5 mb-5">
+      <h3 class="font-bold text-gray-700 mb-3">ケーデンスゲージ</h3>
+      <div class="relative mb-2">
+        <div class="cadence-meter h-5 rounded-full" style="width:100%"></div>
+        <div id="cadence-pointer" class="absolute top-0 w-3 h-5 bg-gray-800 rounded-sm transform -translate-x-1/2 transition-all duration-700" style="left:50%"></div>
+      </div>
+      <div class="flex justify-between text-xs text-gray-400">
+        <span>140</span><span>155</span><span>170 (理想)</span><span>185</span><span>200</span>
+      </div>
+      <p id="cadence-comment" class="mt-2 text-sm text-gray-600 bg-emerald-50 rounded-lg p-2"></p>
+    </div>
+
+    <!-- Race Finish Times -->
+    <div class="bg-white rounded-2xl shadow-lg p-5 mb-5">
+      <h3 class="font-bold text-gray-700 mb-3">🏅 完走タイム予測</h3>
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div class="bg-green-50 rounded-xl p-3 text-center">
+          <div class="text-xs text-green-600 font-semibold mb-1">5km</div>
+          <div id="time-5k" class="text-xl font-bold text-green-700"></div>
+        </div>
+        <div class="bg-blue-50 rounded-xl p-3 text-center">
+          <div class="text-xs text-blue-600 font-semibold mb-1">10km</div>
+          <div id="time-10k" class="text-xl font-bold text-blue-700"></div>
+        </div>
+        <div class="bg-purple-50 rounded-xl p-3 text-center">
+          <div class="text-xs text-purple-600 font-semibold mb-1">ハーフ</div>
+          <div id="time-half" class="text-xl font-bold text-purple-700"></div>
+        </div>
+        <div class="bg-orange-50 rounded-xl p-3 text-center">
+          <div class="text-xs text-orange-600 font-semibold mb-1">フル</div>
+          <div id="time-full" class="text-xl font-bold text-orange-700"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Form Tips -->
+    <div class="bg-white rounded-2xl shadow-lg p-5 mb-5">
+      <h3 class="font-bold text-gray-700 mb-3">💡 フォーム改善ポイント</h3>
+      <div id="form-tips" class="space-y-2"></div>
+    </div>
+
+  </div>
+
+  <!-- Reference Table -->
+  <div class="bg-white rounded-2xl shadow-lg p-5">
+    <h2 class="text-lg font-bold text-gray-800 mb-3">📋 ペース別早見表（身長170cm基準）</h2>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm" role="table" aria-label="ペース別ケーデンス・歩幅・タイム早見表">
+        <thead>
+          <tr class="bg-emerald-50 text-emerald-700">
+            <th class="text-left py-2 px-3 rounded-tl-lg">ペース</th>
+            <th class="text-center py-2 px-2">ケーデンス</th>
+            <th class="text-center py-2 px-2">歩幅</th>
+            <th class="text-center py-2 px-2">5km</th>
+            <th class="text-center py-2 px-2">10km</th>
+            <th class="text-center py-2 px-2">ハーフ</th>
+            <th class="text-center py-2 px-3 rounded-tr-lg">フル</th>
+          </tr>
+        </thead>
+        <tbody id="ref-table-body" class="divide-y divide-gray-100"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<script>
+function formatTime(totalSeconds) {
+  const h = Math.floor(totalSeconds / 3600);
+  const m = Math.floor((totalSeconds % 3600) / 60);
+  const s = Math.round(totalSeconds % 60);
+  if (h > 0) return `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  return `${m}:${String(s).padStart(2,'0')}`;
+}
+
+function calcCadence(height) {
+  // Base 180 spm for 170cm, adjust ±1 spm per 1cm difference
+  const base = 180;
+  const adj = Math.round((170 - height) * 0.3);
+  return Math.min(185, Math.max(165, base + adj));
+}
+
+function calcStride(speedKmh, cadence) {
+  // speed (km/h) = stride(m) * cadence(steps/min) * 60 / 1000
+  // stride = speed * 1000 / (cadence * 60)
+  const speedMs = speedKmh * 1000 / 3600;
+  return Math.round(speedMs / (cadence / 60) * 100); // in cm
+}
+
+function getFormTips(paceSeconds, bmi) {
+  const tips = [];
+  if (paceSeconds < 240) { // sub 4:00/km
+    tips.push({ icon: '⚡', text: '高速ランナー向け: 腕振りを小さく速く、前傾姿勢をより意識しましょう。' });
+    tips.push({ icon: '🦵', text: '高いケーデンスを維持するため、膝の引き上げを意識してください。' });
+  } else if (paceSeconds < 300) { // 4:00-5:00
+    tips.push({ icon: '🎯', text: '中上級者向け: 着地位置を重心直下に近づけてオーバーストライドを避けましょう。' });
+    tips.push({ icon: '💨', text: '呼吸リズム（2歩で吸い、2歩で吐く）を意識するとペース維持が楽になります。' });
+  } else if (paceSeconds < 360) { // 5:00-6:00
+    tips.push({ icon: '🏃', text: '中級者向け: ケーデンス170〜180を目標に、歩幅を広げすぎないよう注意しましょう。' });
+    tips.push({ icon: '👣', text: '踵着地より中足部着地を意識すると衝撃が分散されます。' });
+  } else { // 6:00以上
+    tips.push({ icon: '🌱', text: '初中級者向け: まず「楽に会話できるペース」で走り続けることが最優先です。' });
+    tips.push({ icon: '🔄', text: 'ケーデンスを少しずつ上げる練習（ドリル）をするとスピードアップにつながります。' });
+  }
+  if (bmi > 25) {
+    tips.push({ icon: '⚠️', text: '体重管理も走力向上に直結します。食事と組み合わせた計画を立てましょう。' });
+  }
+  tips.push({ icon: '😊', text: '体幹を安定させると腕・脚のエネルギー効率が上がります。コアトレーニングも取り入れましょう。' });
+  return tips;
+}
+
+function calculate() {
+  const pMin = parseInt(document.getElementById('pace-min').value) || 5;
+  const pSec = parseInt(document.getElementById('pace-sec').value) || 0;
+  const height = parseFloat(document.getElementById('height').value) || 170;
+  const weight = parseFloat(document.getElementById('weight').value) || 65;
+
+  const paceSeconds = pMin * 60 + pSec;
+  const speedKmh = 3600 / paceSeconds;
+  const cadence = calcCadence(height);
+  const stride = calcStride(speedKmh, cadence);
+  const bmi = weight / ((height / 100) ** 2);
+
+  document.getElementById('res-cadence').textContent = cadence;
+  document.getElementById('res-stride').textContent = stride;
+  document.getElementById('res-speed').textContent = speedKmh.toFixed(1);
+
+  // Cadence gauge: map 140-200 → 0-100%
+  const gaugePos = Math.min(100, Math.max(0, ((cadence - 140) / 60) * 100));
+  document.getElementById('cadence-pointer').style.left = gaugePos + '%';
+
+  const comments = {
+    low: 'ケーデンスが低めです。意識的に歩数を上げ、オーバーストライドを改善しましょう。',
+    good: '理想的なケーデンス域(170-180spm)に近いです。このリズムを維持しましょう！',
+    high: 'ケーデンスが高めです。速筋が発達したランナーか、短距離系の走り方です。'
+  };
+  const cmt = cadence < 165 ? comments.low : cadence <= 182 ? comments.good : comments.high;
+  document.getElementById('cadence-comment').textContent = cmt;
+
+  // Times
+  document.getElementById('time-5k').textContent = formatTime(paceSeconds * 5);
+  document.getElementById('time-10k').textContent = formatTime(paceSeconds * 10);
+  document.getElementById('time-half').textContent = formatTime(paceSeconds * 21.0975);
+  document.getElementById('time-full').textContent = formatTime(paceSeconds * 42.195);
+
+  // Tips
+  const tips = getFormTips(paceSeconds, bmi);
+  document.getElementById('form-tips').innerHTML = tips.map(t =>
+    `<div class="flex items-start gap-2 bg-gray-50 rounded-lg p-2">
+      <span class="text-xl flex-shrink-0">${t.icon /* xss-ok: ハードコードtipsのicon(絵文字) */}</span>
+      <p class="text-sm text-gray-700">${t.text /* xss-ok: ハードコードtipsのtext */}</p>
+    </div>`
+  ).join('');
+
+  document.getElementById('results').classList.remove('hidden');
+}
+
+// Reference Table
+function buildReferenceTable() {
+  const paces = [
+    [4,0],[4,30],[5,0],[5,30],[6,0],[6,30],[7,0]
+  ];
+  const tbody = document.getElementById('ref-table-body');
+  tbody.innerHTML = paces.map(([m, s]) => {
+    const ps = m * 60 + s;
+    const spd = 3600 / ps;
+    const cad = 180; // 170cm standard
+    const str = calcStride(spd, cad);
+    return `<tr class="hover:bg-gray-50">
+      <td class="py-2 px-3 font-semibold text-gray-700">${m /* xss-ok: ハードコードpaces配列の整数 */}:${String(s).padStart(2,'0') /* xss-ok: ハードコードpaces配列の整数を文字列化 */}/km</td>
+      <td class="py-2 px-2 text-center text-emerald-600">${cad /* xss-ok: ハードコード整数180 */}</td>
+      <td class="py-2 px-2 text-center text-blue-600">${str /* xss-ok: calcStride()の数値計算結果 */}cm</td>
+      <td class="py-2 px-2 text-center">${formatTime(ps*5) /* xss-ok: 整数の算術結果を時間フォーマット */}</td>
+      <td class="py-2 px-2 text-center">${formatTime(ps*10) /* xss-ok: 整数の算術結果を時間フォーマット */}</td>
+      <td class="py-2 px-2 text-center">${formatTime(ps*21.0975) /* xss-ok: 整数の算術結果を時間フォーマット */}</td>
+      <td class="py-2 px-3 text-center">${formatTime(ps*42.195) /* xss-ok: 整数の算術結果を時間フォーマット */}</td>
+    </tr>`;
+  }).join('');
+}
+
+buildReferenceTable();
+document.getElementById('btn-calc').addEventListener('click', calculate);
+// Auto-calculate on load
+calculate();
+</script>
+</body>
+</html>
